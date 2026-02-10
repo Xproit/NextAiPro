@@ -1,0 +1,4 @@
+/* Minimal KaTeX-like styles (fallback) */
+.katex-rendered { display: inline-block; background: #f8f8f8; padding: 0 4px; border-radius: 4px; font-family: 'Times New Roman', serif; font-style: normal; }
+.katex-block { display: block; background: #f6f6f8; padding: 8px; border-radius: 6px; font-family: monospace; white-space: pre-wrap; }
+.katex-fallback { color: #1d1d1f; }
