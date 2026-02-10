@@ -7,7 +7,7 @@
     <title>X-WisDom Pro - Max</title>
     <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="vendor/katex/katex.min.css">
-    <link rel="stylesheet" href="vendor/highlight/github.min.css">
+    <link id="hljs-theme" rel="stylesheet" href="vendor/highlight/github.min.css">
     <script src="vendor/highlight/highlight.min.js"></script>
     <script src="vendor/marked.min.js"></script>
     <script src="vendor/katex/katex.min.js"></script>
@@ -288,6 +288,14 @@
             position: relative;
         }
 
+        /* Dark mode adjustments */
+        .dark-mode .thinking-section {
+            background: rgba(107,70,193,0.08);
+            border-left-color: #9b7bff;
+            color: var(--text-main);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        }
+
         .thinking-section::before {
             content: "思考";
             position: absolute;
@@ -319,6 +327,67 @@
         .markdown-body ul { padding-left: 20px; margin: 6px 0; }
         .markdown-body code { background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 6px; font-family: monospace; color: var(--text-main); }
         .markdown-body pre { background: #f6f7f9; color: var(--text-main); padding: 12px; border-radius: 8px; overflow:auto; border: 1px solid var(--border); }
+        .dark-mode .markdown-body code { background: rgba(255,255,255,0.03); color: var(--text-main); }
+        .dark-mode .markdown-body pre { background: #0b1220; color: #e6f0ff; border-color: rgba(255,255,255,0.06); }
+        /* Dark-mode code block scrollbar styling */
+        .dark-mode .markdown-body pre,
+        .dark-mode .markdown-body pre code,
+        .dark-mode .markdown-body code {
+            scrollbar-width: thin;
+            /* thumb on dark background, track slightly lighter than background */
+            scrollbar-color: rgba(255,255,255,0.14) rgba(255,255,255,0.03);
+        }
+        .dark-mode .markdown-body pre { overflow: auto; }
+        .dark-mode .markdown-body pre::-webkit-scrollbar,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar,
+        .dark-mode .markdown-body code::-webkit-scrollbar { height: 10px; width: 10px; }
+        .dark-mode .markdown-body pre::-webkit-scrollbar-track,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar-track,
+        .dark-mode .markdown-body code::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 6px; }
+        .dark-mode .markdown-body pre::-webkit-scrollbar-track-piece,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar-track-piece { background: rgba(255,255,255,0.03); }
+        .dark-mode .markdown-body pre::-webkit-scrollbar-thumb,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar-thumb,
+        .dark-mode .markdown-body code::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 6px; }
+        .dark-mode .markdown-body pre::-webkit-scrollbar-thumb:hover,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar-thumb:hover,
+        .dark-mode .markdown-body code::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+        .dark-mode .markdown-body pre::-webkit-scrollbar-corner,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar-corner { background: transparent; }
+
+        /* 强制覆盖：更高优先级，专门针对深色环境下的代码块横向/纵向滚动条 */
+        .dark-mode .markdown-body pre,
+        .dark-mode .markdown-body pre code,
+        .dark-mode .markdown-body code {
+            scrollbar-width: thin !important;
+            scrollbar-color: rgba(255,255,255,0.14) rgba(255,255,255,0.03) !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        .dark-mode .markdown-body pre { overflow: auto !important; }
+
+        /* WebKit/Chromium scrollbar override */
+        .dark-mode .markdown-body pre::-webkit-scrollbar,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar,
+        .dark-mode .markdown-body code::-webkit-scrollbar {
+            height: 10px !important;
+            width: 10px !important;
+        }
+        .dark-mode .markdown-body pre::-webkit-scrollbar-track,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.03) !important;
+            border-radius: 6px;
+        }
+        .dark-mode .markdown-body pre::-webkit-scrollbar-thumb,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.14) !important;
+            border-radius: 6px;
+            border: 2px solid rgba(0,0,0,0) !important;
+        }
+        .dark-mode .markdown-body pre::-webkit-scrollbar-thumb:hover,
+        .dark-mode .markdown-body pre code::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.22) !important;
+        }
+        .dark-mode .markdown-body pre::-webkit-scrollbar-button { display: none !important; }
 
         /* Math styling (fallback if KaTeX not available) */
         .math-inline { background: transparent; padding: 0 2px; font-style: italic; color: var(--text-main); }
@@ -866,7 +935,26 @@
             const chat = chats.find(c => c.id === id);
             const box = document.getElementById('chatBox');
             box.innerHTML = chat.history.length ? '' : `<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:0.3"><h2>有什么可以帮您？</h2></div>`;
-            chat.history.forEach(m => appendMsg(m.role === 'user' ? 'user' : 'ai', m.content));
+            chat.history.forEach(m => {
+                if (m.role === 'user') {
+                    appendMsg('user', m.content);
+                } else {
+                    // 对于 AI 内容，若包含原始控制标签或代码块，使用骨架 + renderFinalAiMessage 恢复渲染
+                    const looksLikeRaw = /<\/?thinking>|<\/?answer>|<pre\b|```/i.test(m.content);
+                    if (looksLikeRaw) {
+                        const aiDiv = createAiMessageSkeleton();
+                        box.appendChild(aiDiv);
+                        try {
+                            renderFinalAiMessage(aiDiv, m.content);
+                        } catch (e) {
+                            // fallback to append
+                            appendMsg('ai', m.content);
+                        }
+                    } else {
+                        appendMsg('ai', m.content);
+                    }
+                }
+            });
             document.getElementById('chatTitle').innerText = chat.title;
             renderChatList();
         }
@@ -1167,6 +1255,10 @@
         function renderFinalAiMessage(aiDiv, fullText) {
             const contentDiv = aiDiv.querySelector('.content');
 
+            // 移除初始的思考指示器（如果仍在）
+            const thinkingIndicator = contentDiv.querySelector('.thinking-indicator');
+            if (thinkingIndicator) thinkingIndicator.remove();
+
             // 解析思考过程和最终答案
             const thinkingMatch = fullText.match(/<thinking>(.*?)<\/thinking>/s);
             const answerMatch = fullText.match(/<answer>(.*?)<\/answer>/s);
@@ -1228,17 +1320,33 @@
 
             // 代码高亮
             hljs.highlightAll();
+            // 确保滚动到最新
+            const box = document.getElementById('chatBox');
+            if (box) box.scrollTop = box.scrollHeight;
         }
 
         function appendMsg(role, text) {
             const div = document.createElement('div');
             div.className = `message ${role}`;
-            const safe = sanitizeForDisplay(text);
-            div.innerHTML = `<div class="avatar">${role === 'user' ? config.userAvatar : config.aiAvatar}</div><div class="content markdown-body">${postProcessHtml(marked.parse(safe))}</div>`;
-            // render math inside appended message
+            const contentHtml = document.createElement('div');
+            contentHtml.className = 'content markdown-body';
+            // 如果 text 看起来已经是完整渲染后的 HTML（仅认常见的 HTML 标签），直接插入并做后处理；
+            // 否则按原始文本走 sanitize -> marked.parse
+            const htmlTagRegex = /<\/?\s*(p|div|h[1-6]|ul|ol|li|pre|code|blockquote|span|a|strong|em|table|img)\b/i;
+            const looksLikeHtml = htmlTagRegex.test(text);
+            if (looksLikeHtml) {
+                contentHtml.innerHTML = postProcessHtml(text);
+            } else {
+                const safe = sanitizeForDisplay(text);
+                contentHtml.innerHTML = postProcessHtml(marked.parse(safe));
+            }
+            div.innerHTML = `<div class="avatar">${role === 'user' ? config.userAvatar : config.aiAvatar}</div>`;
+            div.appendChild(contentHtml);
+            // render math and highlight after insertion
             setTimeout(() => {
                 const content = div.querySelector('.content');
                 if (window.renderMathInElement) renderMathInElement(content);
+                if (window.hljs && hljs.highlightAll) hljs.highlightAll();
             }, 0);
             const box = document.getElementById('chatBox');
             box.appendChild(div);
@@ -1343,6 +1451,25 @@
 
         marked.setOptions({ gfm: true, breaks: true });
         init();
+
+        function updateHighlightTheme() {
+            const link = document.getElementById('hljs-theme');
+            if (!link) return;
+            if (document.body.classList.contains('dark-mode')) {
+                link.href = 'vendor/highlight/github-dark.min.css';
+            } else {
+                link.href = 'vendor/highlight/github.min.css';
+            }
+        }
+
+        // ensure theme reflects current mode on load
+        updateHighlightTheme();
+
+        // tie theme update to toggle button
+        document.getElementById('themeBtn').addEventListener('click', function () {
+            // toggle class is handled elsewhere; wait a tick then update
+            setTimeout(updateHighlightTheme, 50);
+        });
 
         // --- 临时调试：自动注入一次性的渲染测试（只运行一次） ---
         function injectDebugRenderOnce() {
