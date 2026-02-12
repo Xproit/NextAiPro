@@ -1472,6 +1472,7 @@
         });
 
         // --- 临时调试：自动注入一次性的渲染测试（只运行一次） ---
+        /*
         function injectDebugRenderOnce() {
             try {
                 if (localStorage.getItem('render_test_done')) return;
@@ -1501,10 +1502,12 @@
                 sendNext();
             } catch (e) { console.error('injectDebugRenderOnce error', e); }
         }
-
+        
         // 在短延迟后触发，以确保 UI 完成初始化
         setTimeout(injectDebugRenderOnce, 1000);
+        */
     </script>
 </body>
+
 
 </html>
