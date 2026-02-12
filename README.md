@@ -1,2 +1,3 @@
-# README
-readme
+# NextAiPro
+
+一个完整的AI软件，支持10+种供应商，可自定义，轻量化，好！
